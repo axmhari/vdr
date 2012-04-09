@@ -136,6 +136,10 @@ void cShutdownHandler::CallShutdownCommand(time_t WakeupTime, int Channel, const
   if (!WIFEXITED(Status) || WEXITSTATUS(Status))
      esyslog("SystemExec() failed with status %d", Status);
   else {
+     if (WakeupTime) {
+        isyslog("Preparing standby");
+        ShutdownHandler.Exit(20);
+     }
      Setup.NextWakeupTime = WakeupTime; // Remember this wakeup time for comparison on reboot
      Setup.Save();
      }
