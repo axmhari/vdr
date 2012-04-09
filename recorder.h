@@ -21,6 +21,7 @@ private:
   cRingBufferLinear *ringBuffer;
   cFrameDetector *frameDetector;
   cPatPmtGenerator patPmtGenerator;
+  cNaluStreamProcessor *naluStreamProcessor;
   cFileName *fileName;
   cIndexFile *index;
   cUnbufferedFile *recordFile;

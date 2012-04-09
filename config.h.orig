@@ -301,7 +301,6 @@ public:
   int MaxVideoFileSize;
   int SplitEditedFiles;
   int DelTimeshiftRec;
-  int DumpNaluFill;
   int MinEventTimeout, MinUserInactivity;
   time_t NextWakeupTime;
   int MultiSpeedMode;

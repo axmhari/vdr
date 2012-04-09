@@ -57,11 +57,6 @@ inline bool TsHasPayload(const uchar *p)
   return p[3] & TS_PAYLOAD_EXISTS;
 }
 
-inline bool TsSetPayload(const uchar *p)
-{
-  return p[3] & TS_PAYLOAD_EXISTS;
-}
-
 inline bool TsHasAdaptationField(const uchar *p)
 {
   return p[3] & TS_ADAPT_FIELD_EXISTS;
@@ -108,11 +103,6 @@ inline int TsContinuityCounter(const uchar *p)
   return p[3] & TS_CONT_CNT_MASK;
 }
 
-inline void TsSetContinuityCounter(uchar *p, int Counter)
-{
-  p[3] = (p[3] & ~TS_CONT_CNT_MASK) | (Counter & TS_CONT_CNT_MASK);
-}
-
 inline int TsGetAdaptationField(const uchar *p)
 {
   return TsHasAdaptationField(p) ? p[5] : 0x00;
@@ -122,7 +112,6 @@ inline int TsGetAdaptationField(const uchar *p)
 
 int64_t TsGetPts(const uchar *p, int l);
 void TsSetTeiOnBrokenPackets(uchar *p, int l);
-void TsExtendAdaptionField(unsigned char *Packet, int ToLength);
 
 // Some PES handling tools:
 // The following functions that take a pointer to PES data all assume that
@@ -400,79 +389,5 @@ public:
       ///< Returns the number of frames per second, or 0 if this information is not
       ///< available.
   };
-
-
-#define PATCH_NALUDUMP 100
-
-class cNaluDumper {
-    unsigned int History;
-
-    int LastContinuityInput;
-    int LastContinuityOutput;
-    int ContinuityOffset;
-
-    bool DropAllPayload;
-
-    int PesId;
-    int PesOffset;
-
-    int NaluOffset;
-
-    enum eNaluFillState {
-        NALU_NONE=0,    // currently not NALU fill stream
-        NALU_FILL,      // Within NALU fill stream, 0xff bytes and NALU start code in byte 0
-        NALU_TERM,      // Within NALU fill stream, read 0x80 terminating byte
-        NALU_END        // Beyond end of NALU fill stream, expecting 0x00 0x00 0x01 now
-        };
-
-    eNaluFillState NaluFillState;
-
-    struct sPayloadInfo {
-        int DropPayloadStartBytes;
-        int DropPayloadEndBytes;
-        bool DropAllPayloadBytes;
-    };
-
-public:
-    cNaluDumper();
-
-    void reset();
-
-    // Single packet interface:
-    bool ProcessTSPacket(unsigned char *Packet);
-
-private:
-    void ProcessPayload(unsigned char *Payload, int size, bool PayloadStart, sPayloadInfo &Info);
-};
-
-class cNaluStreamProcessor {
-    //Buffer stream interface:
-    int vpid;
-    uchar *data;
-    int length;
-    uchar tempBuffer[TS_SIZE];
-    int tempLength;
-    bool tempLengthAtEnd;
-    cPatPmtParser *pPatPmtParser;
-    cNaluDumper NaluDumper;
-
-    long long int TotalPackets;
-    long long int DroppedPackets;
-public:
-    cNaluStreamProcessor();
-
-    void SetPid(int VPid) { vpid = VPid; }
-    void SetPatPmtParser(cPatPmtParser *_pPatPmtParser) { pPatPmtParser = _pPatPmtParser; }
-    // Set either a PID or set a pointer to an PatPmtParser that will detect _one_ PID
-
-    void PutBuffer(uchar *Data, int Length);
-    // Add new data to be processed. Data must be valid until Get() returns NULL.
-    uchar* GetBuffer(int &OutLength);
-    // Returns filtered data, or NULL/0 to indicate that all data from Put() was processed
-    // or buffered.
-
-    long long int GetTotalPackets() { return TotalPackets; }
-    long long int GetDroppedPackets() { return DroppedPackets; }
-};
 
 #endif // __REMUX_H

@@ -45,14 +45,6 @@ cRecorder::cRecorder(const char *FileName, const cChannel *Channel, int Priority
      Type = 0x06;
      }
   frameDetector = new cFrameDetector(Pid, Type);
-  if (   Type == 0x1B // MPEG4 video
-      && (Setup.DumpNaluFill ? (strstr(FileName, "NALUKEEP") == NULL) : (strstr(FileName, "NALUDUMP") != NULL))) { // MPEG4
-     isyslog("Starting NALU fill dumper");
-     naluStreamProcessor = new cNaluStreamProcessor();
-     naluStreamProcessor->SetPid(Pid);
-     }
-  else
-     naluStreamProcessor = NULL;
   index = NULL;
   fileSize = 0;
   lastDiskSpaceCheck = time(NULL);
@@ -74,12 +66,6 @@ cRecorder::cRecorder(const char *FileName, const cChannel *Channel, int Priority
 cRecorder::~cRecorder()
 {
   Detach();
-  if (naluStreamProcessor) {
-     long long int TotalPackets = naluStreamProcessor->GetTotalPackets();
-     long long int DroppedPackets = naluStreamProcessor->GetDroppedPackets();
-     isyslog("NALU fill dumper: %lld of %lld packets dropped, %lli%%", DroppedPackets, TotalPackets, TotalPackets ? DroppedPackets*100/TotalPackets : 0);
-     delete naluStreamProcessor;
-     }
   delete index;
   delete fileName;
   delete frameDetector;
@@ -168,32 +154,11 @@ void cRecorder::Action(void)
                              fileSize += TS_SIZE;
                              }
                        }
-                    if (naluStreamProcessor) {
-                       naluStreamProcessor->PutBuffer(b, Count);
-                       bool Fail = false;
-                       while (true) {
-                             int OutLength = 0;
-                             uchar *OutData = naluStreamProcessor->GetBuffer(OutLength);
-                             if (!OutData || OutLength <= 0)
-                                break;
-                             if (recordFile->Write(OutData, OutLength) < 0) {
-                                LOG_ERROR_STR(fileName->Name());
-                                Fail = true;
-                                break;
-                                }
-                             fileSize += OutLength;
-                             }
-                       if (Fail)
-                          break;
+                    if (recordFile->Write(b, Count) < 0) {
+                       LOG_ERROR_STR(fileName->Name());
+                       break;
                        }
-                    else {
-                       if (recordFile->Write(b, Count) < 0) {
-                          LOG_ERROR_STR(fileName->Name());
-                          break;
-                          }
-                       fileSize += Count;
-                       }
-
+                    fileSize += Count;
                     t = time(NULL);
                     }
                  }
